@@ -1,0 +1,22 @@
+# SWI-Prolog specific files
+*.qlf
+*.qlf.tmp
+*.pl.tmp
+*.pl.sav
+*.pl.qlf
+*.pl.qlf.tmp
+
+# Backup files
+*.bak
+*~
+*.swp
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IDE specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project 
