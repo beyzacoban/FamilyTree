@@ -188,6 +188,10 @@ relation(Name1, Name2, Relation) :-
     ; kayinvalide(Name1, Name2) -> Relation = 'kayinvalide'
     ; kayinpeder(Name1, Name2)  -> Relation = 'kayinpeder'
     ; marriage(Name1, Name2)    -> Relation = 'kari-koca'
+    ; anneanne(Name1,Name2)     -> Relation = 'anneanne'
+    ; babaanne(Name1, Name2)    -> Relation = 'babaanne'
+    ; dede(Name1, Name2)        -> Relation = 'dede'
+    ; ata(Name1,Name2)          -> Relation = 'ata'
     ; Relation = 'No known relationship found between the given names.'
     ).
 
