@@ -1,19 +1,17 @@
 :- dynamic(person/7).
-:- dynamic(married/2).
-
-
+:- dynamic(married/3).
 
 
 person('Murat Aslan',1940,none,m,none,none,children([])).
 person('Sedanur Aslan',1942,none,f,none,none,children([])).
-married('Murat Aslan','Sedanur Aslan').
+married('Murat Aslan','Sedanur Aslan',1961).
 
 
+% Symmetric relationship definition
+marriage(X,Y,MD) :- married(X,Y,MD).
+marriage(X,Y,MD) :- married(Y,X,MD).
 
 
-% Simetrik ilişki tanımı yapılır
-marriage(X,Y) :- married(X,Y).
-marriage(X,Y) :- married(Y,X).
 %person(isim,birth,death,gender,father,mother,children)
 anne(X,Y):-person(Y,_,_,_,_,X,_),person(X,_,_,f,_,_,_).
 baba(X,Y):-person(Y,_,_,_,X,_,_),person(X,_,_,m,_,_,_).
@@ -51,58 +49,63 @@ abla(X,Y):-
     X\=Y.
 amca(X,Y):-
     person(Y,_,_,_,F,_,_),
-    (erkek_kardes(F,X); abi(F,X)).
+    (erkek_kardes(X,F); abi(X,F)).
 hala(X,Y):-
     person(Y,_,_,_,F,_,_),
-    (kiz_kardes(F,X); abla(F,X)).
+    (kiz_kardes(X,F); abla(X,F)).
 dayi(X,Y):-
     person(Y,_,_,_,_,M,_),
-    (erkek_kardes(M,X); abi(M,X)).
+    (erkek_kardes(X,M); abi(X,M)).
 teyze(X,Y):-
     person(Y,_,_,_,_,M,_),
-    (kiz_kardes(M,X); abla(M,X)).
+    (kiz_kardes(X,M); abla(X,M)).
 eniste(X,Y):-
     (kiz_kardes(Z,Y);abla(Z,Y);teyze(Z,Y);hala(Z,Y)),
-    marriage(X,Z).
+    marriage(X,Z,_).
 yenge(X,Y):-
     (erkek_kardes(Z,Y);abi(Z,Y);amca(Z,Y);dayi(Z,Y)),
-    marriage(Z,X).
-yegen(X,Y):-    %x y'nin yeğeni
+    marriage(Z,X,_).
+yegen(X,Y):-    
     (erkek_kardes(Y,Z);kiz_kardes(Y,Z);abi(Y,Z);abla(Y,Z)),
     (ogul(X,Z);kiz(X,Z)).
 kuzen(X,Y):-
     (amca(Z,Y);dayi(Z,Y);hala(Z,Y);teyze(Z,Y)),
     (ogul(X,Z);kiz(X,Z)).
-kayinvalide(X,Y):- %X YNİN KAYINVALİDESİ
+kayinvalide(X,Y):-
     anne(X,Z),
-    marriage(Z,Y).
-kayinpeder(X,Y):- %X YNİN KAYINVALİDESİ
+    marriage(Z,Y,_).
+kayinpeder(X,Y):-
     baba(X,Z),
-    marriage(Z,Y).
+    marriage(Z,Y,_).
 gelin(X,Y):-
-    marriage(X,Z),
+    marriage(X,Z,_),
     ogul(Z,Y).
 damat(X,Y):-
     kiz(Z,Y),
-    marriage(X,Z).
+    marriage(X,Z,_).
 bacanak(X,Y):-
      X\=Y,
-     marriage(X,Z),
+     marriage(X,Z,MD),
      (kiz_kardes(Z,K);abla(Z,K)),
      person(K,_,_,f,_,_,_),
-     marriage(Y,K).
+     marriage(Y,K,MD).
 baldiz(X,Y):-  %x y nin baldızı
      (kiz_kardes(K,X);abla(K,X)),
-     marriage(Y,K),
+     marriage(Y,K,_),
      person(X,_,_,f,_,_,_).
 elti(X,Y):-
      X\=Y,
-     (abi(K,L);erkek_kardes(K,L)),
-     (abi(L,K);erkek_kardes(L,K)),
-     marriage(K,X),
-     marriage(L,Y).
+     person(X,_,_,f,_,_,_),
+     person(Y,_,_,f,_,_,_),
+     marriage(K,X,_),
+     marriage(L,Y,_),
+     (abi(K,L); erkek_kardes(K,L)).
+gorumce(X,Y):-
+     (person(X,_,_,f,_,_,_),person(Y,_,_,f,_,_,_)),
+     (abi(K,X);erkek_kardes(K,X)),
+     marriage(K,Y,_).
 kayinbirader(X,Y):-
-     marriage(Y,K),
+     marriage(Y,K,_),
      (kiz_kardes(K,X);abla(K,X)),
      person(X,_,_,m,_,_,_).
 anneanne(X,Y):-
@@ -114,19 +117,16 @@ babaanne(X,Y):-
 dede(X,Y):-
      (anne(K,Y);baba(K,Y)),
      baba(X,K).
+torun(X,Y):-
+     anneanne(Y,X);
+     babaanne(Y,X);
+     dede(Y,X).
 ata(X,Y):-
      (anneanne(K,Y);babaanne(K,Y);dede(K,X)),
      (anne(X,K);baba(X,K)).
 
 
-
-
-
-
-
-
-start :-
-    main_menu.
+start :- main_menu.
 
 
 main_menu :-
@@ -142,8 +142,6 @@ main_menu :-
     write('Please choose an operation (1-6): '),
     read(Choice),
     process_choice(Choice).
-
-
 
 
 process_choice(1) :- ask_relation, main_menu.
@@ -183,23 +181,22 @@ relation(Name1, Name2, Relation) :-
     ; damat(Name1, Name2)       -> Relation = 'damat'
     ; eniste(Name1, Name2)      -> Relation = 'eniste'
     ; yenge(Name1, Name2)       -> Relation = 'yenge'
+    ; elti(Name1,Name2)         -> Relation = 'elti'
+    ; gorumce(Name1,Name2)      -> Relation = 'gorumce'
     ; bacanak(Name1, Name2)     -> Relation = 'bacanak'
     ; baldiz(Name1, Name2)      -> Relation = 'baldiz'
+    ; kayinbirader(Name1,Name2) -> Relation = 'kayinbirader'
     ; kayinvalide(Name1, Name2) -> Relation = 'kayinvalide'
     ; kayinpeder(Name1, Name2)  -> Relation = 'kayinpeder'
-    ; marriage(Name1, Name2)    -> Relation = 'kari-koca'
+    ; marriage(Name1, Name2,_)  ->
+      (person(Name1,_,_,f,_,_,_)-> Relation = 'kari-koca';Relation ='koca-kari')
     ; anneanne(Name1,Name2)     -> Relation = 'anneanne'
     ; babaanne(Name1, Name2)    -> Relation = 'babaanne'
     ; dede(Name1, Name2)        -> Relation = 'dede'
+    ; torun(Name1,Name2)        -> Relation = 'torun'
     ; ata(Name1,Name2)          -> Relation = 'ata'
     ; Relation = 'No known relationship found between the given names.'
     ).
-
-
-
-
-
-
 
 
 add_update_person:-
@@ -209,55 +206,38 @@ add_update_person:-
     read(Choice),
     (Choice = 1 -> add_person;
      Choice = 2 -> update_person).
+
+
 add_person :-
     takeFatherName(Father),
     takeMotherName(Mother),
-
-
-
-
-
-
-
-
-    % Anne ve babanın evli olup olmadığını kontrol eder
-    ( marriage(Father, Mother) ->
+    ( marriage(Father, Mother,_) ->
         true
     ;
         writeln('Error: Mother and father are not married.'),
-        !, fail
+        main_menu, fail
     ),
-
-
     writeln('Please enter the name and surname of the person:'),
     read(Name),
+    (person(Name,_,_,_,_,_,_)->writeln('The person is already exits.'),main_menu;true),
     takeBirthYear(Mother, Father, BirthYear),
     writeln('Please enter the death year (or none if alive):'),
     read(DeathYear),
     checkForDeathYear(DeathYear, BirthYear, ValidDeathYear),
-    writeln('Please enter the gender (male/female):'),
+    writeln('Please enter the gender (m/f):'),
     read(Gender),
     assertz(person(Name, BirthYear, ValidDeathYear, Gender, Father, Mother, children([]))),
-    
-    % Baba varsa, çocuk listesi güncellenir
     ( person(Father, BY, DY, G, Ff, Fm, children(OldChildren)) ->
         retract(person(Father, BY, DY, G, Ff, Fm, children(OldChildren))),
         append(OldChildren, [Name], NewChildren),
         assertz(person(Father, BY, DY, G, Ff, Fm, children(NewChildren)))
     ; true ),
-
-
-    % Anne varsa, çocuk listesi güncellenir
     ( person(Mother, BY2, DY2, G2, Mf, Mm, children(OldChildren2)) ->
         retract(person(Mother, BY2, DY2, G2, Mf, Mm, children(OldChildren2))),
         append(OldChildren2, [Name], NewChildren2),
         assertz(person(Mother, BY2, DY2, G2, Mf, Mm, children(NewChildren2)))
     ; true ),
-
-
     writeln('Person added successfully.').
-
-
 
 
 takeFatherName(Father) :-
@@ -280,12 +260,8 @@ takeBirthYear(Mother, Father, BirthYear) :-
     writeln('Please enter the birth year:'),
     read(TempBirthYear),
     checkForMother(Mother, Father, TempBirthYear, BirthYear).
-%The checkForFather function is called from within the checkForMother function. So we only called checkForMother here
 
 
-
-
-% checkForMother and checkForFather check if the birth year is valid with respect to the mother's and father's birth and death years.
 checkForMother(Mother, Father, TempBirthYear, ValidBirthYear) :-
     ( integer(TempBirthYear) ->
         ( person(Mother, MotherBirthYear, MotherDeathYear, f, _, _, _) ->
@@ -328,8 +304,6 @@ checkForFather(Mother, Father, TempBirthYear, ValidBirthYear) :-
     ).
 
 
-
-
 checkForDeathYear(DeathYear, BirthYear, ValidDeathYear) :-
     ( DeathYear = none -> ValidDeathYear = none
     ; integer(DeathYear) ->
@@ -347,16 +321,14 @@ checkForDeathYear(DeathYear, BirthYear, ValidDeathYear) :-
 
 
 update_person :-
-writeln('1- Update the birth year'),
-writeln('2- Update the death year'),
-writeln('3- Cancel'),
-writeln('Please choose an option:'),
-read(Choice),
-(Choice = 1 -> update_birth_year;
- Choice = 2 -> update_death_year;
- Choice = 3 -> writeln('Update cancelled.')).
-
-
+    writeln('1- Update the birth year'),
+    writeln('2- Update the death year'),
+    writeln('3- Cancel'),
+    writeln('Please choose an option:'),
+    read(Choice),
+    (Choice = 1 -> update_birth_year;
+     Choice = 2 -> update_death_year;
+     Choice = 3 -> writeln('Update cancelled.')).
 
 
 update_birth_year :-
@@ -388,11 +360,6 @@ update_birth_year :-
     ).
 
 
-
-
-% Anne ve baba varsa:
-%   - Çocuk doğumu, ebeveynin doğumundan sonra olmalı
-%   - Ebeveynin ölümünden önce olmalı (ölüm yılı varsa)
 checkParents(Mother, Father, NewBirthYear, NewBirthYear) :-
     check_parent(Mother, NewBirthYear),
     check_parent(Father, NewBirthYear), !.
@@ -403,7 +370,6 @@ checkParents(_, _, _, _) :-
     fail.
 
 
-% Parent none ise geçerli kabul edilir. Değilse kurallar kontrol edilir.
 check_parent(none, _) :- !.
 check_parent(Parent, ChildBirthYear) :-
     person(Parent, ParentBirth, ParentDeath, _, _, _, _),
@@ -411,7 +377,6 @@ check_parent(Parent, ChildBirthYear) :-
     ( ParentDeath == none ; ChildBirthYear =< ParentDeath ).
 
 
-% Kişinin çocuklarının doğum tarihlerini kontrol eder.
 checkChildren(Person, NewBirthYear) :-
     person(Person, _, _, _, _, _, children(Children)),
     check_children_birth_years(Children, NewBirthYear).
@@ -422,8 +387,6 @@ check_children_birth_years([Child|Rest], NewBirthYear) :-
     person(Child, ChildBirth, _, _, _, _, _),
     NewBirthYear =< ChildBirth,
     check_children_birth_years(Rest, NewBirthYear).
-
-
 
 
 update_death_year :-
@@ -457,9 +420,6 @@ update_death_year :-
     ).
 
 
-
-
-% Ölüm yılı tüm çocukların doğum yılından sonra olmalı
 checkDeathAfterChildren(Person, NewDeathYear) :-
     person(Person, _, _, _, _, _, children(Children)),
     check_death(Children, NewDeathYear).
@@ -472,9 +432,6 @@ check_death([Child|Rest], NewDeathYear) :-
     check_death(Rest, NewDeathYear).
 
 
-
-
-% Helper to check if a person is alive
 is_alive(Name) :-
     person(Name, _, Death, _, _, _, _),
     (Death = 'none' ; (number(Death), Death > 2025)).
@@ -485,24 +442,51 @@ add_marriage:-
     read(First),
     writeln('Name of second person'),
     read(Second),
-    (person(First,_,_,_,_,_,_), person(Second,_,_,_,_,_,_) -> true ;
-        (person(First,_,_,_,_,_,_) ->
-            % Second sistemde yok, onun bilgilerini al
+    writeln('Date of marriage'),
+    read(DateOfMarriage),
+    (
+        person(First, BD1, _, _, _, _, _), person(Second, BD2, _, _, _, _, _) -> true ;
+        (person(First, BD1, _, _, _, _, _) ->
             writeln('Please type the birth date of SECOND person.'),
             read(BD2),
+            AGE2 is DateOfMarriage-BD2,
+            (
+                integer(AGE2), AGE2 < 18 ->
+                    format('Error: ~w is under 18 (Age: ~w)! Marriage not allowed.~n', [Second, AGE2]),
+                    main_menu,
+                    !
+                ;AGE2 == 'Unknown' ->
+                    writeln('Error: Age information is incomplete or invalid. Marriage not allowed.'),
+                    main_menu,
+                    !
+                ;true
+            ),
             writeln('Please type the death date of SECOND person.'),
             read(DeathInput2),
-            ((DeathInput2 = 'none' ; DeathInput2 = none ; DeathInput2 = "none") -> DD2 = none ; DD2 = DeathInput2),
+            ((DeathInput2 = 'none' ; DeathInput2 = none ; DeathInput2 = "none") -> DD2 = none ;
+            (integer(DeathInput2) -> DD2 = DeathInput2 ; DD2 = none)),
             writeln('Please type the gender of SECOND person.'),
             read(G2),
             assertz(person(Second, BD2, DD2, G2, none, none, children([])))
-        ; person(Second,_,_,_,_,_,_) ->
-            % First sistemde yok, onun bilgilerini al
+        ; person(Second, BD2, _, _, _, _, _) ->
             writeln('Please type the birth date of FIRST person.'),
             read(BD1),
+            AGE1 is DateOfMarriage-BD1,
+            (
+                integer(AGE1), AGE1 < 18 ->
+                    format('Error: ~w is under 18 (Age: ~w)! Marriage not allowed.~n', [First, AGE1]),
+                    main_menu,
+                    !
+                ; AGE1 == 'Unknown' ->
+                    writeln('Error: Age information is incomplete or invalid. Marriage not allowed.'),
+                    main_menu,
+                    !
+                ; true
+            ),
             writeln('Please type the death date of FIRST person.'),
             read(DeathInput1),
-            ((DeathInput1 = 'none' ; DeathInput1 = none ; DeathInput1 = "none") -> DD1 = none ; DD1 = DeathInput1),
+            ((DeathInput1 = 'none' ; DeathInput1 = none ; DeathInput1 = "none") -> DD1 = none ;
+            (integer(DeathInput1) -> DD1 = DeathInput1 ; DD1 = none)),
             writeln('Please type the gender of FIRST person.'),
             read(G1),
             assertz(person(First, BD1, DD1, G1, none, none, children([])))
@@ -512,39 +496,40 @@ add_marriage:-
             !
         )
     ),
-    % Evli olup olmadıklarını kontrol et
-    ((marriage(First,_); marriage(Second,_)) ->
-        writeln('Married persons cannot marry again.'),
-        main_menu,
-        !
-    ; true),
-
-
-
-
-    % Yaş kontrolü
-    get_age(BD1, DD1, AGE1),
-    get_age(BD2, DD2, AGE2),
+    ( is_alive(First) ->
+        true
+    ; ( DateOfMarriage > DD1 ->
+        writeln('Error: First person is dead. Marriage not allowed.'),
+        main_menu
+        )
+    ),
+    ( is_alive(Second) ->
+        true
+    ; ( DateOfMarriage > DD2 ->
+        writeln('Error: Second person is dead. Marriage not allowed.'),
+        main_menu
+        )
+    ),
+    AGE1 is DateOfMarriage-BD1,
+    AGE2 is DateOfMarriage-BD2,
     (
         integer(AGE1), AGE1 < 18 ->
             format('Error: ~w is under 18 (Age: ~w)! Marriage not allowed.~n', [First, AGE1]),
             main_menu,
             !
-        ;   integer(AGE2), AGE2 < 18 ->
+        ; integer(AGE2), AGE2 < 18 ->
             format('Error: ~w is under 18 (Age: ~w)! Marriage not allowed.~n', [Second, AGE2]),
             main_menu,
             !
-        ;   AGE1 == 'Unknown' ; AGE2 == 'Unknown' ->
+        ; AGE1 == 'Unknown' ; AGE2 == 'Unknown' ->
             writeln('Error: Age information is incomplete or invalid. Marriage not allowed.'),
             main_menu,
             !
-        ;   true
+        ; true
     ),
-    (is_alive(First) -> true ; writeln('Error: First person is dead. Marriage not allowed.'), main_menu),
-    (is_alive(Second) -> true ; writeln('Error: Second person is dead. Marriage not allowed.'), main_menu),
     (
-     (person(First,_,_,m,_,_,_),person(Second,_,_,f,_,_,_));
-     (person(First,_,_,f,_,_,_),person(Second,_,_,m,_,_,_))
+        (person(First,_,_,m,_,_,_),person(Second,_,_,f,_,_,_));
+        (person(First,_,_,f,_,_,_),person(Second,_,_,m,_,_,_))
     ),
     relation(First,Second,Relation),
     (Relation \= 'No known relationship found between the given names.' ->
@@ -552,15 +537,9 @@ add_marriage:-
     ;
         true
     ),
-    assertz(married(First, Second)),
+    assertz(married(First, Second,DateOfMarriage)),
     writeln('Marriage added successfully.'),
     main_menu.
-
-
-
-
-
-
 
 
 forbidden_marriage(Relation, Name1, Name2) :-
@@ -573,23 +552,27 @@ forbidden_marriage(Relation, Name1, Name2) :-
      Relation = 'teyze'        -> writeln('Invalid Marriage: teyze-yegen'), main_menu;
      Relation = 'hala'         -> writeln('Invalid Marriage: hala-yegen'), main_menu;
      Relation = 'yegen'        ->
-        (dayi(Name2, Name1) -> writeln('Invalid Marriage: yegen-dayi'), main_menu;
-         amca(Name2, Name1) -> writeln('Invalid Marriage: yegen-amca'), main_menu;
-         teyze(Name2, Name1) -> writeln('Invalid Marriage: yegen-teyze'), main_menu;
-         hala(Name2, Name1) -> writeln('Invalid Marriage: yegen-hala'), main_menu;
+        (dayi(Name2, Name1)    -> writeln('Invalid Marriage: yegen-dayi'), main_menu;
+         amca(Name2, Name1)    -> writeln('Invalid Marriage: yegen-amca'), main_menu;
+         teyze(Name2, Name1)   -> writeln('Invalid Marriage: yegen-teyze'), main_menu;
+         hala(Name2, Name1)    -> writeln('Invalid Marriage: yegen-hala'), main_menu;
          true
         );
      Relation = 'abi'          -> writeln('Invalid Marriage: abi-kiz kardes'), main_menu;
      Relation = 'abla'         -> writeln('Invalid Marriage: abla-erkek kardes'), main_menu;
      Relation = 'erkek kardes' -> writeln('Invalid Marriage: erkek kardes-abla'), main_menu;
      Relation = 'kiz kardes'   -> writeln('Invalid Marriage: kiz kardes-abi'), main_menu;
+     Relation = 'anneanne'     -> writeln('Invalid Marriage: anneanne-torun'), main_menu;
+     Relation = 'babaanne'     -> writeln('Invalid Marriage: babaanne-torun'), main_menu;
+     Relation = 'dede'         -> writeln('Invalid Marriage: dede-torun'), main_menu;
+     Relation = 'ata'          -> writeln('Invalid Marriage: ata-torun'), main_menu;
+     Relation = 'torun'        ->
+        (anneanne(Name2, Name1)-> writeln('Invalid Marriage: torun-anneanne'), main_menu;
+         babaanne(Name2, Name1)-> writeln('Invalid Marriage: torun-babaanne'), main_menu;
+         dede(Name2, Name1)    -> writeln('Invalid Marriage: toun-dede'), main_menu;
+         true
+        );
      true).
-
-
-
-
-
-
 
 
 get_information :-
@@ -617,8 +600,6 @@ get_information :-
     ).
 
 
-
-
 get_age(Birth, Death, Age) :-
     integer(Birth),
     (Death = 'none' -> Age is 2025 - Birth ;
@@ -627,60 +608,38 @@ get_age(Birth, Death, Age) :-
 get_age(_, _, 'Unknown').
 
 
-
-
-
-
-
-
-% Kök kişiler (Murat ve Sedanur) level 0
 level(Name, 0) :-
     member(Name, ['Murat Aslan', 'Sedanur Aslan']).
 
 
-
-
-% Kan bağı olan çocuklar için level hesaplama
 level(Name, L) :-
-    % Baba tarafından
     (person(Name, _, _, _, Father, _, _),
     Father \= none,
     level(Father, L0),
     L is L0 + 1)
     ;
-    % Anne tarafından
     (person(Name, _, _, _, _, Mother, _),
     Mother \= none,
     level(Mother, L0),
     L is L0 + 1).
 
 
-
-
-% Evlilik yoluyla bağlantılı kişiler için (damat/gelin)
 level(Name, L) :-
-    % Eş üzerinden level bulma
-    marriage(Name, Spouse),
+    marriage(Name, Spouse,_),
     level(Spouse, L),
-    % Eşle aynı seviyede say
     !.
 
 
-% Group people by their level
 level_list(Levels) :-
     findall(Level-Person, (person(Person,_,_,_,_,_,_), level(Person, Level)), Pairs),
     sort(Pairs, Sorted),
     group_levels(Sorted, Levels).
 
 
-
-
 group_levels([], []).
 group_levels([L-P|Rest], [L-[P|People]|Grouped]) :-
     same_level(L, Rest, People, Rest2),
     group_levels(Rest2, Grouped).
-
-
 
 
 same_level(_, [], [], []).
@@ -690,12 +649,9 @@ same_level(L, [L2-P|Rest], [], [L2-P|Rest]) :-
     L \= L2.
 
 
-
-
-% Print married couples on the same line, singles alone
 print_couples([], _).
 print_couples([Person|Rest], Seen) :-
-    (married(Person, Spouse), \+ member(Spouse, Seen) ->
+    (marriage(Person, Spouse,_), \+ member(Spouse, Seen) ->
         format('~w-~w~n', [Person, Spouse]),
         print_couples(Rest, [Person, Spouse|Seen])
     ;
@@ -719,6 +675,12 @@ print_levels([Level-People|Rest]) :-
 print_tree :-
     level_list(Levels),
     print_levels(Levels).
+
+
+
+
+
+
 
 
 
